@@ -24,8 +24,7 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 # Copy application files
-COPY server.js vcd-parser.js ./
-COPY index.html styles.css app.js ./
+COPY . .
 
 # Expose port and start server
 EXPOSE 3001
