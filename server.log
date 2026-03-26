@@ -1,0 +1,12 @@
+
+> rtlbench@1.0.0 dev
+> node server.js
+
+
+  RTL Bench server running at http://localhost:3001
+  Press Ctrl+C to stop
+
+  iverilog:  ✓ found
+  verilator: ✗ not found (deploy with Dockerfile)
+  yosys:     ✓ found
+

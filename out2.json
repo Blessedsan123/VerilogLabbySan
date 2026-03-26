@@ -1,0 +1,156 @@
+{
+  "creator": "Yosys 0.33 (git sha1 2584903a060)",
+  "modules": {
+    "counter_4bit": {
+      "attributes": {
+        "hdlname": "\\counter_4bit",
+        "top": "00000000000000000000000000000001",
+        "src": "design.v:1.1-16.10"
+      },
+      "ports": {
+        "clk": {
+          "direction": "input",
+          "bits": [ 2 ]
+        },
+        "rst_n": {
+          "direction": "input",
+          "bits": [ 3 ]
+        },
+        "enable": {
+          "direction": "input",
+          "bits": [ 4 ]
+        },
+        "count": {
+          "direction": "output",
+          "bits": [ 5, 6, 7, 8 ]
+        },
+        "overflow": {
+          "direction": "output",
+          "bits": [ 9 ]
+        }
+      },
+      "cells": {
+        "$add$design.v:12$3": {
+          "hide_name": 1,
+          "type": "$add",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000100",
+            "B_SIGNED": "00000000000000000000000000000000",
+            "B_WIDTH": "00000000000000000000000000000001",
+            "Y_WIDTH": "00000000000000000000000000000100"
+          },
+          "attributes": {
+            "src": "design.v:12.16-12.28"
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 5, 6, 7, 8 ],
+            "B": [ "1" ],
+            "Y": [ 10, 11, 12, 13 ]
+          }
+        },
+        "$auto$ff.cc:266:slice$8": {
+          "hide_name": 1,
+          "type": "$adffe",
+          "parameters": {
+            "ARST_POLARITY": "00000000000000000000000000000000",
+            "ARST_VALUE": "0000",
+            "CLK_POLARITY": "00000000000000000000000000000001",
+            "EN_POLARITY": "00000000000000000000000000000001",
+            "WIDTH": "00000000000000000000000000000100"
+          },
+          "attributes": {
+            "src": "design.v:8.3-14.6"
+          },
+          "port_directions": {
+            "ARST": "input",
+            "CLK": "input",
+            "D": "input",
+            "EN": "input",
+            "Q": "output"
+          },
+          "connections": {
+            "ARST": [ 3 ],
+            "CLK": [ 2 ],
+            "D": [ 10, 11, 12, 13 ],
+            "EN": [ 4 ],
+            "Q": [ 5, 6, 7, 8 ]
+          }
+        },
+        "$eq$design.v:15$4": {
+          "hide_name": 1,
+          "type": "$eq",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000100",
+            "B_SIGNED": "00000000000000000000000000000000",
+            "B_WIDTH": "00000000000000000000000000000100",
+            "Y_WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+            "src": "design.v:15.22-15.38"
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 5, 6, 7, 8 ],
+            "B": [ "1", "1", "1", "1" ],
+            "Y": [ 9 ]
+          }
+        }
+      },
+      "netnames": {
+        "$add$design.v:12$3_Y": {
+          "hide_name": 1,
+          "bits": [ 10, 11, 12, 13 ],
+          "attributes": {
+            "src": "design.v:12.16-12.28"
+          }
+        },
+        "clk": {
+          "hide_name": 0,
+          "bits": [ 2 ],
+          "attributes": {
+            "src": "design.v:2.21-2.24"
+          }
+        },
+        "count": {
+          "hide_name": 0,
+          "bits": [ 5, 6, 7, 8 ],
+          "attributes": {
+            "src": "design.v:5.21-5.26"
+          }
+        },
+        "enable": {
+          "hide_name": 0,
+          "bits": [ 4 ],
+          "attributes": {
+            "src": "design.v:4.21-4.27"
+          }
+        },
+        "overflow": {
+          "hide_name": 0,
+          "bits": [ 9 ],
+          "attributes": {
+            "src": "design.v:6.21-6.29"
+          }
+        },
+        "rst_n": {
+          "hide_name": 0,
+          "bits": [ 3 ],
+          "attributes": {
+            "src": "design.v:3.21-3.26"
+          }
+        }
+      }
+    }
+  }
+}
