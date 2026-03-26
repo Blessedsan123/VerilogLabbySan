@@ -417,7 +417,7 @@ Here is the user's current project context. Use it to inform your answers, but d
 ${contextStr}
 `;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     // Map messages payload to Gemini API history format
     const history = messages.slice(0, -1).map((msg, index) => {
