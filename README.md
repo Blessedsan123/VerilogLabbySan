@@ -36,5 +36,9 @@ Contributions are welcome! Please fork the repository and submit a pull request 
 ![SystemVerilog](https://img.shields.io/badge/SystemVerilog-Supported-blue)
 ![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)
 
+RTL Bench — free online Verilog & SystemVerilog simulator. Write design + testbench, run simulation, view waveforms, and get Gemini AI assistance. No install needed. Open source. Try it: 
+
+https://veriloglabbysan.onrender.com/
+
 ### License
 This project is licensed under the MIT License. See the LICENSE file for details.
