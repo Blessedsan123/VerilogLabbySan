@@ -32,5 +32,9 @@ Contributions are welcome! Please fork the repository and submit a pull request 
 
 ---
 
+![Verilog](https://img.shields.io/badge/Verilog-Supported-green)
+![SystemVerilog](https://img.shields.io/badge/SystemVerilog-Supported-blue)
+![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)
+
 ### License
 This project is licensed under the MIT License. See the LICENSE file for details.
