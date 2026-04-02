@@ -102,26 +102,13 @@
 
             <!-- SCHEMATIC TAB CONTENT -->
             <div class="tab-content" id="tab-schematic">
-                <div class="schematic-container" style="display:flex; flex-direction:column; height:100%; position:relative; overflow:hidden;">
-                    <div class="waveform-toolbar">
-                        <div class="waveform-toolbar-left">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-                            <span>ELABORATED RTL DESIGN</span>
-                        </div>
-                        <div class="waveform-toolbar-right">
-                            <button class="waveform-btn" id="btn-generate-rtl" style="background:var(--accent); color:#fff; border-color:var(--accent);">
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2L2 12l3 3 7-7 7 7 3-3L12 2z"/></svg>
-                                <span style="font-weight:600;">GENERATE SCHEMATIC</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div id="digitaljs-paper" style="flex:1; width:100%; height:100%; position:relative; overflow:hidden; background:var(--bg-primary);">
-                        <div id="digitaljs-placeholder" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-muted); padding:40px; text-align:center;">
-                            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3" style="margin-bottom:16px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-                            <p style="margin:0;">Click "Generate Schematic" to build the hierarchical block diagram.</p>
-                            <p style="margin:8px 0 0; font-size:12px; opacity:0.7;">Double-click blocks to expand into gate-level primitives.</p>
-                        </div>
-                    </div>
+                <div class="schematic-container" style="display:flex; flex-direction:column; height:100%; align-items:center; justify-content:center; gap:20px; color:var(--text-muted);">
+                    <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/></svg>
+                    <p style="margin:0; font-size:14px;">Generate a schematic to open the interactive viewer</p>
+                    <button id="btn-generate-rtl" style="display:flex;align-items:center;gap:8px;background:var(--accent);color:#0D1117;font-size:12px;font-weight:700;letter-spacing:1.5px;padding:12px 24px;border-radius:8px;box-shadow:0 0 20px rgba(0,230,118,0.3);">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2L2 12l3 3 7-7 7 7 3-3L12 2z"/></svg>
+                        GENERATE SCHEMATIC
+                    </button>
                 </div>
             </div>
 
@@ -234,6 +221,35 @@
         </div>
     </div>
 
+    <!-- ═══ Floating RTL Schematic Window ══════════════════════════ -->
+    <div id="schematic-float" class="schematic-float hidden">
+        <div class="sf-titlebar" id="sf-titlebar">
+            <div class="sf-title">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/></svg>
+                ELABORATED RTL DESIGN
+            </div>
+            <div class="sf-titlebar-controls">
+                <button class="waveform-btn" id="btn-schematic-magnify" title="Zoom In">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                </button>
+                <button class="waveform-btn" id="btn-schematic-restore" title="Fit to Window">RESTORE</button>
+                <!-- Maximize / restore-window toggle -->
+                <button class="sf-close" id="sf-maximize" title="Maximise" style="font-size:12px;">
+                    <svg id="sf-max-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9,3 3,3 3,9"/><polyline points="15,21 21,21 21,15"/></svg>
+                </button>
+                <button class="sf-close" id="sf-close" title="Close">&#x2715;</button>
+            </div>
+        </div>
+        <div id="digitaljs-paper" style="flex:1; min-height:0; min-width:0; overflow:hidden; background:#fff; position:relative; cursor:grab;">
+            <div id="digitaljs-placeholder" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-muted); padding:40px; text-align:center;">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3" style="margin-bottom:16px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                <p style="margin:0;">Generating schematic…</p>
+            </div>
+        </div>
+        <!-- Resize handle -->
+        <div class="sf-resize" id="sf-resize"></div>
+    </div>
+
     <!-- Floating AI Chat -->
     <div id="ai-chat-window" class="floating-chat hidden">
         <div class="chat-header">
@@ -261,6 +277,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=13"></script>
 </body>
 </html>

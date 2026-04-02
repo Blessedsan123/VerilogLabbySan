@@ -1908,17 +1908,67 @@ document.addEventListener('keydown', (e) => {
 // ============================================================
 
 function initSchematic() {
+    const floatWin = document.getElementById('schematic-float');
+    const paperEl  = document.getElementById('digitaljs-paper');
+
+    // Interaction state (shared across generate calls)
+    let panning  = false,  panOrigin  = {};
+    let dragging = false,  dragOrigin = {};
+    let resizing = false,  resizeOrigin = {};
+
+    // ────────────────────────────────────────────────────────────────
+    // fitSchematicToWindow: resize SVG to fill container FIRST (so the
+    // internal background rect matches), then scale content to fit.
+    // ────────────────────────────────────────────────────────────────
+    function fitSchematicToWindow() {
+        const p = state.circuitPaper;
+        if (!p) return;
+        const W = paperEl.clientWidth;
+        const H = paperEl.clientHeight;
+        if (!W || !H) return;
+
+        // 1) Grow/shrink SVG + its background rect to fill the container
+        p.setDimensions(W, H);
+
+        // 2) Let JointJS fit the content inside that exact area (centred)
+        p.scaleContentToFit({
+            padding:       28,
+            allowNewOrigin: 'any',
+            fittingBBox:   { x: 0, y: 0, width: W, height: H }
+        });
+
+        state.currentScale = p.scale().sx;
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // zoomAt: zoom by factor around a screen point (mx, my)
+    // ────────────────────────────────────────────────────────────────
+    function zoomAt(factor, mx, my) {
+        const p = state.circuitPaper;
+        if (!p) return;
+        const s  = p.scale().sx;
+        const t  = p.translate();
+        const ns = Math.min(10, Math.max(0.04, s * factor));
+        // Local point under cursor stays fixed
+        const lx = (mx - t.tx) / s;
+        const ly = (my - t.ty) / s;
+        p.scale(ns);
+        p.translate(mx - lx * ns, my - ly * ns);
+        state.currentScale = ns;
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // Generate schematic & open floating window
+    // ────────────────────────────────────────────────────────────────
     document.getElementById('btn-generate-rtl').addEventListener('click', async () => {
-        // Flush current design code to state
         const designIdx = state.activeFile.design;
         state.files.design[designIdx].code = state.editors.design.getValue();
-        
         const designFiles = state.files.design.map(f => ({ name: f.name, code: f.code }));
 
         const btn = document.getElementById('btn-generate-rtl');
         const origHTML = btn.innerHTML;
         btn.innerHTML = `<span style="font-weight:600;">ELABORATING...</span>`;
-        btn.disabled = true;
+        btn.disabled  = true;
         btn.style.opacity = '0.5';
 
         try {
@@ -1927,43 +1977,159 @@ function initSchematic() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ designFiles })
             });
-
             const data = await resp.json();
-            if (!data.success || !data.netlist) {
+            if (!data.success || !data.netlist)
                 throw new Error(data.error || 'Server returned invalid netlist.');
-            }
 
+            // Clear old SVG content (keep placeholder)
             const placeholder = document.getElementById('digitaljs-placeholder');
             if (placeholder) placeholder.style.display = 'none';
-
-            const paper = document.getElementById('digitaljs-paper');
-            // Instead of clearing everything, remove only the circuit SVG elements to retain the placeholder for future
-            Array.from(paper.children).forEach(child => {
-                if (child.id !== 'digitaljs-placeholder') {
-                    child.remove();
-                }
+            Array.from(paperEl.children).forEach(c => {
+                if (c.id !== 'digitaljs-placeholder') c.remove();
             });
-            paper.style.overflow = 'auto';
 
-            if (typeof digitaljs === 'undefined') {
-                throw new Error('DigitalJS is not loaded properly from the CDN.');
-            }
+            // Vivado-style: no browser scrollbars — pan/zoom via paper API
+            paperEl.style.overflow = 'hidden';
+            paperEl.style.cursor   = 'grab';
 
-            // Create and render schematic
-            const circuit = new digitaljs.Circuit(data.netlist);
-            circuit.displayOn(paper);
-            
-            // Start simulation to activate dynamic states if needed (though not required for static viewing)
-            circuit.start(); 
+            if (typeof digitaljs === 'undefined')
+                throw new Error('DigitalJS library not loaded.');
+
+            const circuit  = new digitaljs.Circuit(data.netlist);
+            const djsPaper = circuit.displayOn(paperEl);
+            state.circuit      = circuit;
+            state.circuitPaper = djsPaper;
+            state.currentScale = 1;
+            circuit.start();
+
+            // Size SVG to fill the container
+            djsPaper.setDimensions(paperEl.clientWidth, paperEl.clientHeight);
+
+            // Show window, then auto-fit after CSS transition settles
+            floatWin.classList.remove('hidden');
+            setTimeout(fitSchematicToWindow, 420);
 
             appendConsole('success', '✓ RTL Block Diagram generated successfully!');
         } catch (err) {
-            alert('Failed to generate gate-level block diagram: ' + err.message);
+            alert('Failed to generate schematic: ' + err.message);
         } finally {
             btn.innerHTML = origHTML;
-            btn.disabled = false;
+            btn.disabled  = false;
             btn.style.opacity = '1';
         }
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Button handlers
+    // ────────────────────────────────────────────────────────────────
+    document.getElementById('sf-close').addEventListener('click', () =>
+        floatWin.classList.add('hidden'));
+
+    // Maximize ↔ Restore-window toggle
+    const ICON_EXPAND   = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9,3 3,3 3,9"/><polyline points="15,21 21,21 21,15"/></svg>`;
+    const ICON_COMPRESS = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4,14 4,20 10,20"/><polyline points="20,10 20,4 14,4"/><line x1="4" y1="20" x2="10" y2="13"/><line x1="20" y1="4" x2="14" y2="11"/></svg>`;
+    let isMaximised = false;
+    document.getElementById('sf-maximize').addEventListener('click', () => {
+        isMaximised = !isMaximised;
+        floatWin.classList.toggle('sf-fullscreen', isMaximised);
+        document.getElementById('sf-maximize').innerHTML = isMaximised ? ICON_COMPRESS : ICON_EXPAND;
+        document.getElementById('sf-maximize').title = isMaximised ? 'Restore Window' : 'Maximise';
+        // Re-fit diagram to new window dimensions after layout settles
+        setTimeout(fitSchematicToWindow, 60);
+    });
+
+
+    document.getElementById('btn-schematic-restore').addEventListener('click', () =>
+        fitSchematicToWindow());
+
+    document.getElementById('btn-schematic-magnify').addEventListener('click', () =>
+        zoomAt(1.5, paperEl.clientWidth / 2, paperEl.clientHeight / 2));
+
+    // ────────────────────────────────────────────────────────────────
+    // Cursor-centred wheel zoom — no scrollbars needed
+    // ────────────────────────────────────────────────────────────────
+    paperEl.addEventListener('wheel', (e) => {
+        if (!state.circuitPaper) return;
+        e.preventDefault();
+        const rect   = paperEl.getBoundingClientRect();
+        const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+        zoomAt(factor, e.clientX - rect.left, e.clientY - rect.top);
+    }, { passive: false });
+
+    // ────────────────────────────────────────────────────────────────
+    // Drag-to-pan the schematic (click background, not cells)
+    // ────────────────────────────────────────────────────────────────
+    paperEl.addEventListener('mousedown', (e) => {
+        if (!state.circuitPaper) return;
+        // Don't pan when user clicks a circuit element or wire
+        if (e.target.closest('.joint-element, .joint-link')) return;
+        panning = true;
+        const t = state.circuitPaper.translate();
+        panOrigin = { mx: e.clientX, my: e.clientY, tx: t.tx, ty: t.ty };
+        paperEl.style.cursor = 'grabbing';
+        e.preventDefault();
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Drag floating window titlebar
+    // ────────────────────────────────────────────────────────────────
+    document.getElementById('sf-titlebar').addEventListener('mousedown', (e) => {
+        if (e.target.closest('button')) return;
+        const r = floatWin.getBoundingClientRect();
+        // Lock in px so right/bottom don't force resize on move
+        floatWin.style.width  = r.width  + 'px';
+        floatWin.style.height = r.height + 'px';
+        floatWin.style.right  = 'auto';
+        floatWin.style.bottom = 'auto';
+        floatWin.style.transition = 'none';
+        dragging = true;
+        dragOrigin = { sx: e.clientX, sy: e.clientY, ol: r.left, ot: r.top };
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Resize — bottom-right corner handle
+    // ────────────────────────────────────────────────────────────────
+    document.getElementById('sf-resize').addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const r = floatWin.getBoundingClientRect();
+        resizing = true;
+        resizeOrigin = { sx: e.clientX, sy: e.clientY, ow: r.width, oh: r.height };
+        floatWin.style.transition = 'none';
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Consolidated mousemove — pan, drag, resize
+    // ────────────────────────────────────────────────────────────────
+    document.addEventListener('mousemove', (e) => {
+        if (panning && state.circuitPaper) {
+            state.circuitPaper.translate(
+                panOrigin.tx + e.clientX - panOrigin.mx,
+                panOrigin.ty + e.clientY - panOrigin.my
+            );
+        }
+        if (dragging) {
+            floatWin.style.left = Math.max(0, dragOrigin.ol + e.clientX - dragOrigin.sx) + 'px';
+            floatWin.style.top  = Math.max(0, dragOrigin.ot + e.clientY - dragOrigin.sy) + 'px';
+        }
+        if (resizing) {
+            const nw = Math.max(400, resizeOrigin.ow + e.clientX - resizeOrigin.sx);
+            const nh = Math.max(300, resizeOrigin.oh + e.clientY - resizeOrigin.sy);
+            floatWin.style.width  = nw + 'px';
+            floatWin.style.height = nh + 'px';
+            // Grow SVG to fill the new container size live
+            if (state.circuitPaper)
+                state.circuitPaper.setDimensions(paperEl.clientWidth, paperEl.clientHeight);
+        }
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Consolidated mouseup
+    // ────────────────────────────────────────────────────────────────
+    document.addEventListener('mouseup', () => {
+        if (panning)  { panning  = false; paperEl.style.cursor = 'grab'; }
+        if (dragging) { dragging = false; floatWin.style.transition = ''; }
+        if (resizing) { resizing = false; floatWin.style.transition = ''; }
     });
 }
 
@@ -1971,6 +2137,10 @@ function initSchematic() {
 // 12. AI CHAT INTEGRATION
 // ============================================================
 let chatHistory = [];
+
+
+
+
 
 function initAIChat() {
     const btnChat = document.getElementById('btn-ai-chat');
