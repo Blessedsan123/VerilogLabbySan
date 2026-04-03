@@ -385,8 +385,7 @@ app.post('/api/elaborate', async (req, res) => {
 });
 
 // ─── POST /api/chat ───────────────────────────────────────────────────────────
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const Groq = require('groq-sdk');
 
 app.post('/api/chat', async (req, res) => {
   const { messages, designFiles, testbenchFiles } = req.body;
@@ -395,9 +394,11 @@ app.post('/api/chat', async (req, res) => {
   }
 
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ success: false, error: 'GEMINI_API_KEY environment variable is not set.' });
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({ success: false, error: 'GROQ_API_KEY environment variable is not set.' });
     }
+
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
     // Format the context
     let contextStr = "### Current Code Context:\n\n";
@@ -410,7 +411,7 @@ app.post('/api/chat', async (req, res) => {
       testbenchFiles.forEach(f => { contextStr += `// File: ${f.name}\n${f.code}\n\n`; });
     }
 
-    const systemPrompt = `You are a helpful and expert AI assistant integrated into "RTL Bench", a browser-based Verilog and SystemVerilog IDE. 
+    const systemPrompt = `You are a helpful and expert AI assistant integrated into "VerilogLab", a browser-based Verilog and SystemVerilog IDE. 
 Your primary goal is to help users write, debug, properly design, and understand Verilog and SystemVerilog code.
 When providing code, do NOT wrap it in unnecessary explanations unless asked; be concise and extremely precise.
 Always prioritize providing syntactically correct and synthesizable RTL and robust simulation testbenches.
@@ -420,37 +421,37 @@ Here is the user's current project context. Use it to inform your answers, but d
 ${contextStr}
 `;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Map messages payload to Groq/OpenAI API history format
+    const history = messages.map(msg => ({
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
+      content: msg.content
+    }));
 
-    // Map messages payload to Gemini API history format
-    const history = messages.slice(0, -1).map((msg, index) => {
-      let content = msg.content;
-      if (index === 0 && msg.role !== 'assistant') {
-        content = systemPrompt + "\n\n---\nUser query:\n" + content;
-      }
-      return {
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: content }]
-      };
-    });
-    
-    const chat = model.startChat({
-      history: history
+    history.unshift({ role: 'system', content: systemPrompt });
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: history,
+      model: "llama-3.3-70b-versatile", // Fast and capable open source model
     });
 
-    let latestUserMsg = messages[messages.length - 1].content;
-    if (messages.length === 1) {
-      latestUserMsg = systemPrompt + "\n\n---\nUser query:\n" + latestUserMsg;
-    }
-
-    const result = await chat.sendMessage(latestUserMsg);
-    const responseText = result.response.text();
+    const responseText = chatCompletion.choices[0]?.message?.content || "";
 
     return res.json({ success: true, text: responseText });
 
   } catch (err) {
     console.error('Chat API error:', err);
-    return res.status(500).json({ success: false, error: err.message });
+
+    // Provide friendly error messages for common API failures
+    let userMessage = err.message || JSON.stringify(err);
+    if (err.status === 429) {
+      userMessage = '⚠️ API quota exceeded. Your Groq API key has hit its limit. Please wait a few minutes and try again.';
+    } else if (err.status === 401 || err.status === 403) {
+      userMessage = '🔑 API key error. Check that GROQ_API_KEY is valid.';
+    } else if (err.error && err.error.error && err.error.error.message) {
+      userMessage = `❌ Request Error: ${err.error.error.message}`;
+    }
+
+    return res.status(500).json({ success: false, error: userMessage });
   }
 });
 
@@ -485,7 +486,9 @@ function getModuleName(code) {
 
 // ─── Start server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n  RTL Bench server running at http://localhost:${PORT}`);
+  console.log(`\n  VerilogLab server running at http://localhost:${PORT}`);
+  console.log(`  AI Chat Model: Groq LLaMA 3.3 (llama-3.3-70b-versatile)`);
+  console.log(`  Groq API key set:    ${process.env.GROQ_API_KEY ? '✓ YES' : '✗ NO — set GROQ_API_KEY'}`);
   console.log(`  Press Ctrl+C to stop\n`);
 
   // Verify compilers at startup
