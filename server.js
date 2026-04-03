@@ -11,6 +11,9 @@
 
 'use strict';
 
+// Load .env file for local development (no-op on Render where env vars are set via dashboard)
+require('dotenv').config();
+
 const express   = require('express');
 const cors      = require('cors');
 const archiver  = require('archiver');
