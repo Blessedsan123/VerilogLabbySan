@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Environment files — NEVER commit secrets to git!
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+server.log
+
+# Build outputs
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp files
+tmp/
+*.tmp
